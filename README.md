@@ -1,23 +1,22 @@
+# Round Pakenham • Calorie Calculator (Streamlit) — v4
 
-# Round Pakenham • Calorie Calculator (Streamlit)
+- High-contrast black background with white text and red accents for readability.
+- Uses **official 9Round logo** (white) displayed on a solid black background.
+- Title Case labels, body type descriptions.
+- Goal = Weight Change + Timeframe (weeks).
+- Macro breakdown: protein (g/kg), fats (% kcal), carbs (remainder).
+- **Client Name** input and **automatic date**.
+- Built-in **Download Report (.docx)** button with branded header.
 
-A branded Streamlit app for estimating daily calorie needs using the Mifflin–St Jeor equation, activity multipliers, body-type nudges, and goal intensity.
-
-## Local Run
+## Run Locally
 ```bash
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
 ## Deploy on Streamlit Community Cloud
-1. Create a **public GitHub repo** and add these files.
-2. In Streamlit Community Cloud, connect your GitHub and pick this repo.
-3. Set the app path to `streamlit_app.py` and deploy.
+Upload this folder to a public GitHub repo and set the app path to `streamlit_app.py`.
 
-### Optional
-- Add `assets/9round_logo.png` to display your club's logo.
-- Theme is set in `.streamlit/config.toml` (red/black/white).
-
-## Notes
-- Estimates only; not medical advice.
-- Body type adjustment is a small heuristic (ecto +5%, meso 0%, endo −5%).
+## Assets
+- `assets/9round_logo_white.png` — official logo (white) for the app header.
+- `assets/9round_banner_black.png` — black banner for Word report headings.
