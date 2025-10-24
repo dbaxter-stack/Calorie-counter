@@ -1,6 +1,1 @@
-Run with:
-
-```
-pip install -r requirements.txt
-streamlit run streamlit_app.py
-```
+9Round Pakenham Calorie Calculator v4.4\n\n- Black/red/white theme\n- Text branding only (no logo)\n- Downloadable report with activity examples, friendly layout, and clear notes\n\nRun with:\n\n````\npip install -r requirements.txt\nstreamlit run streamlit_app.py\n````
