@@ -80,8 +80,17 @@ def calculate_intake(sex, age, weight, height, units, activity, body_type, goal,
     protein_g, fats_g, carbs_g = macro_split(calories, w_kg, protein_g_per_kg, fat_percent)
     return CalcResult(bmr, tdee, calories, daily_delta, protein_g, fats_g, carbs_g)
 
+# Header Branding
 st.markdown("<div class='brand-title'>9Round <span class='sub-brand'>Pakenham</span></div>", unsafe_allow_html=True)
 st.caption("Estimate Your Daily Calorie Needs And Macronutrients Based On Activity, Body Type And Goal.")
+
+# Body Type Descriptions
+with st.expander("Body Type Descriptions", expanded=False):
+    st.markdown(
+        "- **Ectomorph** — Naturally slim; often finds it harder to gain weight/muscle; may benefit from a slightly higher intake.\n"
+        "- **Mesomorph** — Athletic build; typically maintains more easily.\n"
+        "- **Endomorph** — Stores body fat more readily; a slightly lower intake may help."
+    )
 
 with st.form("Calc Form"):
     c1, c2 = st.columns(2)
@@ -95,22 +104,55 @@ with st.form("Calc Form"):
         activity = st.selectbox("Activity Level", ["Sedentary", "Light", "Moderate", "Very", "Extra"], index=2)
     with c2:
         body_type = st.selectbox("Body Type", ["Mesomorph", "Ectomorph", "Endomorph"], index=0)
-        goal = st.selectbox("Goal", ["Maintain", "Lose Weight", "Gain Weight"], index=0)
+        goal = st.selectbox("Goal", ["Maintain", "Lose Weight", "Gain Weight"], index=0,
+                       help="Choose your objective. Maintain = stay around maintenance. Lose = create a moderate deficit. Gain = small surplus for muscle gain.")
         target_change, weeks = (0.0, 0)
         if goal != "Maintain":
-            target_change = st.number_input("Target Weight Change (Kg Or Lb)", min_value=0.1, max_value=100.0, value=5.0, step=0.1)
-            weeks = st.number_input("Timeframe (Weeks)", min_value=1, max_value=104, value=8, step=1)
+            target_change = st.number_input("Target Weight Change (Kg Or Lb)", min_value=0.1, max_value=100.0, value=5.0, step=0.1,
+                                help="How much weight you want to lose or gain in total.")
+            weeks = st.number_input("Timeframe (Weeks)", min_value=1, max_value=104, value=8, step=1,
+                         help="Shorter timeframes require larger daily calorie changes. Slower changes are usually more sustainable.")
         st.markdown("---")
-        protein_g_per_kg = st.slider("Protein (g/Kg)", 1.2, 2.6, 2.0, 0.1)
-        fat_percent = st.slider("Fats (% Of Calories)", 0.20, 0.35, 0.25, 0.01)
+        protein_g_per_kg = st.slider(
+            "Protein (g/Kg)", 1.2, 2.6, 2.0, 0.1,
+            help="Sets daily protein in grams per kilogram of body weight. Higher protein means fewer calories left for carbs and fats."
+        )
+        fat_percent = st.slider(
+            "Fats (% Of Calories)", 0.20, 0.35, 0.25, 0.01,
+            help="Controls the share of total calories from fats. Lower fat = more carbs; higher fat = fewer carbs."
+        )
     submitted = st.form_submit_button("Calculate")
 
 if submitted:
     res = calculate_intake(sex, age, weight, height, units, activity, body_type, goal, target_change, weeks, protein_g_per_kg, fat_percent)
+    # ---- Safety Flags ----
+    # Compute weekly rate of change in kg/week
+    def to_kg(u, m):
+        return m * 0.453592 if u == 'Imperial' else m
+    weekly_rate_kg = 0.0
+    if goal != 'Maintain' and weeks > 0:
+        weekly_rate_kg = to_kg(units, abs(target_change)) / weeks
+    # Thresholds (common guidance): loss > 0.75 kg/week, gain > 0.5 kg/week is aggressive
+    if goal == 'Lose Weight' and weekly_rate_kg > 0.75:
+        st.warning('This plan targets more than ~0.75 kg per week of weight loss. That is aggressive and may be hard to sustain. Consider extending your timeframe.')
+    if goal == 'Gain Weight' and weekly_rate_kg > 0.5:
+        st.warning('This plan targets more than ~0.5 kg per week of weight gain. That is aggressive and may be hard to sustain. Consider extending your timeframe.')
+    # Also flag very large daily calorie changes relative to maintenance
+    if res.tdee > 0 and abs(res.daily_delta_kcal) / res.tdee > 0.25:
+        st.warning('Your required daily calorie change is greater than ~25% of maintenance. A smaller change is usually more realistic and healthier.')
     st.markdown(f"<h4 style='color:#fff;'>Target Daily Calories: {res.calories:.0f} kcal/day</h4>", unsafe_allow_html=True)
     st.write(f"**Protein:** {res.protein_g:.0f} g  •  **Fats:** {res.fats_g:.0f} g  •  **Carbs:** {res.carbs_g:.0f} g")
 
     def build_report():
+        # Recompute safety flags for inclusion in the report
+        def to_kg(u, m):
+            return m * 0.453592 if u == 'Imperial' else m
+        weekly_rate_kg = 0.0
+        if goal != 'Maintain' and weeks > 0:
+            weekly_rate_kg = to_kg(units, abs(target_change)) / weeks
+        warn_loss = (goal == 'Lose Weight' and weekly_rate_kg > 0.75)
+        warn_gain = (goal == 'Gain Weight' and weekly_rate_kg > 0.5)
+        warn_delta = (res.tdee > 0 and abs(res.daily_delta_kcal) / res.tdee > 0.25)
         doc = Document()
         doc.add_heading("9Round Pakenham • Calorie & Macro Plan", level=1)
         doc.add_paragraph(f"Client: {client_name or '(Not Provided)'}    Date: {date.today().strftime('%d/%m/%Y')}")
@@ -132,6 +174,15 @@ if submitted:
         doc.add_paragraph("• Daily chores and errands (≈ 500–800 kcal)")
         doc.add_paragraph(f"Target Daily Calories: {res.calories:.0f} kcal/day — The estimated intake to help reach your goal.")
 
+        # Warnings section (only if triggered)
+        if warn_loss or warn_gain or warn_delta:
+            doc.add_heading("Warnings", level=2)
+            if warn_loss:
+                doc.add_paragraph("This plan targets more than ~0.75 kg per week of weight loss. This is aggressive and may be hard to sustain.")
+            if warn_gain:
+                doc.add_paragraph("This plan targets more than ~0.5 kg per week of weight gain. This is aggressive and may be hard to sustain.")
+            if warn_delta:
+                doc.add_paragraph("The required daily calorie change exceeds ~25% of maintenance. A smaller change is usually more realistic and healthier.")
         doc.add_heading("Macronutrient Targets", level=2)
         doc.add_paragraph(f"Protein: {res.protein_g:.0f} g/day")
         doc.add_paragraph(f"Fats: {res.fats_g:.0f} g/day")
